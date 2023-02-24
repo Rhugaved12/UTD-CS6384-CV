@@ -9,6 +9,8 @@ import time
 import numpy as np
 import pybullet as p
 import matplotlib.pyplot as plt
+import math
+
 
 class TableYCBEnv():
 
@@ -26,7 +28,6 @@ class TableYCBEnv():
 
         self.connect()
         self.reset()
-
 
     def connect(self):
         """
@@ -48,7 +49,6 @@ class TableYCBEnv():
 
         self.connected = True
 
-
     def reset(self):
 
         # Set the camera  .
@@ -61,8 +61,10 @@ class TableYCBEnv():
         aspect = float(self._window_width) / self._window_height
         self.near = 0.1
         self.far = 10
-        self._view_matrix = p.computeViewMatrixFromYawPitchRoll(look, distance, yaw, pitch, roll, 2)
-        self._proj_matrix = p.computeProjectionMatrixFOV(fov, aspect, self.near, self.far)
+        self._view_matrix = p.computeViewMatrixFromYawPitchRoll(
+            look, distance, yaw, pitch, roll, 2)
+        self._proj_matrix = p.computeProjectionMatrixFOV(
+            fov, aspect, self.near, self.far)
         self._light_position = np.array([-1.0, 0, 2.5])
 
         p.resetSimulation()
@@ -73,52 +75,53 @@ class TableYCBEnv():
         p.stepSimulation()
 
         # Set table and plane
-        plane_file = os.path.join(self.root_dir, 'data/floor/model_normalized.urdf') # _white
-        table_file = os.path.join(self.root_dir, 'data/table/models/model_normalized.urdf')
+        plane_file = os.path.join(
+            self.root_dir, 'data/floor/model_normalized.urdf')  # _white
+        table_file = os.path.join(
+            self.root_dir, 'data/table/models/model_normalized.urdf')
 
         self.obj_path = [plane_file, table_file]
         self.plane_id = p.loadURDF(plane_file, [0, 0, 0])
         self.table_pos = np.array([0, 0, 0])
         self.table_id = p.loadURDF(table_file, self.table_pos[0], self.table_pos[1], self.table_pos[2],
-                             0.707, 0., 0., 0.707)
-
+                                   0.707, 0., 0., 0.707)
 
     def _add_mesh(self, obj_file, trans, quat, scale=1):
         """
         Add a mesh with URDF file.
         """
-        bid = p.loadURDF(obj_file, trans, quat, globalScaling=scale, flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
+        bid = p.loadURDF(obj_file, trans, quat, globalScaling=scale,
+                         flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
         return bid
-
 
     def place_objects(self, name):
         """
         Place of an object onto the table
         """
-        
+
         # 3D translation is [tx, ty, tz]
         tx = 0
         ty = 0
         tz = 0.4
 
         # euler angles: roll, pitch, yaw
-        # then convert roll, pitch, yaw to quaternion using function p.getQuaternionFromEuler()        
+        # then convert roll, pitch, yaw to quaternion using function p.getQuaternionFromEuler()
         roll = 0
         pitch = 0
         yaw = 0
         quaternion = p.getQuaternionFromEuler([roll, pitch, yaw])
-        
+
         # put the box using the 3D translation and the 3D rotation
-        urdf = os.path.join(self.root_dir, 'data', name, 'model_normalized.urdf')
-        uid = self._add_mesh(urdf, [tx, ty, tz], [quaternion[0], quaternion[1], quaternion[2], quaternion[3]])  # xyzw
+        urdf = os.path.join(self.root_dir, 'data', name,
+                            'model_normalized.urdf')
+        uid = self._add_mesh(urdf, [tx, ty, tz], [
+                             quaternion[0], quaternion[1], quaternion[2], quaternion[3]])  # xyzw
         self.object_uid = uid
         p.resetBaseVelocity(uid, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
 
         time.sleep(3.0)
         for _ in range(2000):
             p.stepSimulation()
-
-
 
     def get_observation(self, view_matrix):
         """
@@ -131,55 +134,93 @@ class TableYCBEnv():
                                                    projectionMatrix=self._proj_matrix,
                                                    physicsClientId=self.cid,
                                                    renderer=p.ER_BULLET_HARDWARE_OPENGL)
-                                                   
+
         # visualization
         fig = plt.figure()
-        
+
         # show RGB image
         ax = fig.add_subplot(1, 3, 1)
         plt.imshow(rgba[:, :, :3])
         ax.set_title('RGB image')
-        
+
         # show depth image
         ax = fig.add_subplot(1, 3, 2)
         plt.imshow(depth)
         ax.set_title('depth image')
-        
+
         # show segmentation mask
         ax = fig.add_subplot(1, 3, 3)
         plt.imshow(mask)
-        ax.set_title('segmentation mask')                  
+        ax.set_title('segmentation mask')
         plt.show()
-                                                
-                                                   
+
     # compute the view matrix to capture an image for the front of the cracker box
     # You need to first query the pose of the cracker box and then set the camera pose accordingly
     # Useful functions from pybullet: getBasePositionAndOrientation, getEulerFromQuaternion, computeViewMatrixFromYawPitchRoll
     # https://usermanual.wiki/Document/pybullet20quickstart20guide.479068914/html
     # Set the distance of the camera to 2.5
-    #TODO: implement this function                                                   
-    def look_at_box_front(self):
-    
+    # TODO: implement this function
 
-        
+    def look_at_box_front(self):
+        # Get the ID of the box
+        # id = p.getBodyUniqueId("003_cracker_box")
+
+        # First get the pose of the box "003_cracker_box" from the simulation
+        position_q, orientation_q = p.getBasePositionAndOrientation(
+            p.getBodyUniqueId(self.object_uid))
+        print("-----------------****************-------------")
+        print(type(self.object_uid))
+        print(position_q, orientation_q)
+
+        # convert the quaternion coordinates to euler coordinates
+        orientation_eu = p.getEulerFromQuaternion(orientation_q)
+
+        # print(orientation_eu)
+        pitch = math.degrees(orientation_eu[2])
+        yaw = math.degrees(orientation_eu[1])
+        roll = math.degrees(orientation_eu[0])
+        print(orientation_eu)
+        print(pitch, yaw, roll)
+
+        # now we calculate the camera position
+        camera_dist = 2.5
+
+        camera_position = [
+            position_q[0],
+            position_q[1],
+            position_q[2]
+        ]
+
+        # Set the camera orientation to face the box
+        view_matrix = p.computeViewMatrixFromYawPitchRoll(
+            camera_position,
+            yaw=90,
+            pitch=0,
+            roll=0,
+            # yaw=yaw,
+            # pitch=pitch,
+            # roll=roll,
+            distance=camera_dist,
+            upAxisIndex=2
+        )
         return view_matrix
-        
+
 
 # main function
 if __name__ == '__main__':
 
     # create the table environment
     env = TableYCBEnv()
-    
+
     # place the cracker box to the table
     name = '003_cracker_box'
     env.place_objects(name)
 
     # render image before looking at the box
     env.get_observation(env._view_matrix)
-        
+
     # look at the box
     view_matrix = env.look_at_box_front()
-    
+
     # render image again
     env.get_observation(view_matrix)
