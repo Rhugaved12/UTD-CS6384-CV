@@ -71,9 +71,9 @@ def harris_corner(im):
     ixy = np.multiply(ix, iy)
 
     # step 3: compute the sums of products of derivatives at each pixel using Gaussian filter from OpenCV
-    ix2 = cv2.GaussianBlur(src=ix2, ksize=(3, 3), sigmaX=3, sigmaY=0)
-    iy2 = cv2.GaussianBlur(src=iy2, ksize=(3, 3), sigmaX=3, sigmaY=0)
-    ixy = cv2.GaussianBlur(src=ixy, ksize=(3, 3), sigmaX=3, sigmaY=0)
+    ix2 = cv2.GaussianBlur(src=ix2, ksize=(5, 5), sigmaX=5, sigmaY=0)
+    iy2 = cv2.GaussianBlur(src=iy2, ksize=(5, 5), sigmaX=5, sigmaY=0)
+    ixy = cv2.GaussianBlur(src=ixy, ksize=(5, 5), sigmaX=5, sigmaY=0)
 
     # step 4: compute determinant and trace of the M matrix
     detM = np.zeros_like(ix2)
