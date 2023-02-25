@@ -23,12 +23,18 @@ def non_maximum_suppression(R):
             # left = max(0, x-1)
             # right = min(R[0].shape[0]-1, x+1)
             # bottom = min(R.shape[0]-1, y+1)
-            flag = 1
+            flag = -1
             for m in range(max(0, y-1), min(R.shape[0], y+2)):
                 for n in range(max(0, x-1), min(R[0].shape[0], x+2)):
-                    if R[m, n] >= pixel_val:
-                        flag = 0
-            if flag:
+                    if y == m and x == n:
+                        continue
+                    # if R[m, n] >= pixel_val:
+                    #     flag = 0
+                    if flag < R[m, n]:
+                        flag = R[m, n]
+
+            if flag < pixel_val:
+                # print(y, x)
                 mask[y, x] = 1
 
     return mask
@@ -44,7 +50,8 @@ def harris_corner(im):
     # step 0: convert RGB to gray-scale image
     # 0.2989 * R + 0.5870 * G + 0.1140 * B
     gray = 0.2989 * im[:, :, 0] + 0.5870 * im[:, :, 1] + 0.1140 * im[:, :, 2]
-    plt.imshow(gray, cmap=plt.get_cmap('gray'))
+    # gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    # plt.imshow(gray, cmap=plt.get_cmap('gray'))
     # return gray
 
     # step 1: compute image gradient using Sobel filters
@@ -64,9 +71,9 @@ def harris_corner(im):
     ixy = np.multiply(ix, iy)
 
     # step 3: compute the sums of products of derivatives at each pixel using Gaussian filter from OpenCV
-    ix2 = cv2.GaussianBlur(src=ix2, ksize=(0, 0), sigmaX=3, sigmaY=0)
-    iy2 = cv2.GaussianBlur(src=iy2, ksize=(0, 0), sigmaX=3, sigmaY=0)
-    ixy = cv2.GaussianBlur(src=ixy, ksize=(0, 0), sigmaX=3, sigmaY=0)
+    ix2 = cv2.GaussianBlur(src=ix2, ksize=(3, 3), sigmaX=3, sigmaY=0)
+    iy2 = cv2.GaussianBlur(src=iy2, ksize=(3, 3), sigmaX=3, sigmaY=0)
+    ixy = cv2.GaussianBlur(src=ixy, ksize=(3, 3), sigmaX=3, sigmaY=0)
 
     # step 4: compute determinant and trace of the M matrix
     detM = np.zeros_like(ix2)
@@ -91,7 +98,7 @@ def harris_corner(im):
     # #TODO implement the non_maximum_suppression function above
     corner_mask = non_maximum_suppression(R)
 
-    return R
+    return corner_mask
 
 
 # main function

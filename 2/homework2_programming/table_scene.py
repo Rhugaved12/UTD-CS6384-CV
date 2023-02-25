@@ -194,9 +194,9 @@ class TableYCBEnv():
         # Set the camera orientation to face the box
         view_matrix = p.computeViewMatrixFromYawPitchRoll(
             camera_position,
-            yaw=90,
-            pitch=0,
-            roll=0,
+            yaw=yaw + 90,
+            pitch=pitch,
+            roll=roll,
             # yaw=yaw,
             # pitch=pitch,
             # roll=roll,
